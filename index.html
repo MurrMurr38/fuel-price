@@ -2,72 +2,143 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="theme-color" content="#00695c" />
   <link rel="manifest" href="manifest.json" />
   <title>Kerala Fuel Prices</title>
+
   <style>
-    body{font-family:system-ui,Arial;max-width:520px;margin:40px auto;padding:16px}
-    .card{padding:16px;border-radius:8px;box-shadow:0 1px 6px rgba(0,0,0,.08)}
-    .price{font-size:2rem;margin:8px 0}
-    .muted{color:#666;font-size:.9rem}
-    #refresh{margin-top:12px}
+    body {
+      margin: 0;
+      padding: 0;
+      background: #f3f5f7;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+      color: #222;
+    }
+    header {
+      display: flex;
+      align-items: center;
+      padding: 20px;
+      background: white;
+      box-shadow: 0 1px 6px rgba(0,0,0,0.1);
+    }
+    header img {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      margin-right: 15px;
+    }
+    header h1 {
+      font-size: 1.5rem;
+      margin: 0;
+    }
+    .container {
+      max-width: 540px;
+      margin: 30px auto;
+      padding: 0 16px;
+    }
+    .card {
+      padding: 20px;
+      border-radius: 14px;
+      background: white;
+      box-shadow: 0 1px 6px rgba(0,0,0,0.08);
+    }
+    .label {
+      font-size: 1rem;
+      color: #444;
+      margin-bottom: 6px;
+    }
+    .price {
+      font-size: 2.2rem;
+      font-weight: 600;
+      margin: 6px 0 20px 0;
+    }
+    .muted {
+      font-size: 0.9rem;
+      color: #777;
+    }
+    button {
+      margin-top: 16px;
+      padding: 12px 18px;
+      font-size: 1rem;
+      border: none;
+      background: #00695c;
+      color: white;
+      border-radius: 8px;
+      cursor: pointer;
+    }
   </style>
 </head>
+
 <body>
+
+<header>
+  <img src="icons/icon-512.png" alt="App Logo">
   <h1>Kerala Fuel Prices</h1>
+</header>
 
+<div class="container">
   <div class="card">
-    <div><strong id="district">Kerala (state)</strong></div>
-    <div class="price">Petrol: <span id="petrol">—</span></div>
-    <div class="price">Diesel: <span id="diesel">—</span></div>
-    <div class="muted">Last update: <span id="updated">—</span></div>
-    <button id="refresh">Refresh now</button>
-    <p class="muted">Tip: on iOS use Safari → Share → Add to Home Screen</p>
+    <div class="label">District</div>
+    <div id="district"><strong>Kerala (state)</strong></div>
+
+    <div class="label">Petrol</div>
+    <div class="price" id="petrol">—</div>
+
+    <div class="label">Diesel</div>
+    <div class="price" id="diesel">—</div>
+
+    <div class="muted">Last update: <span id="updated">Loading…</span></div>
+
+    <button id="refresh">Refresh</button>
+
+    <p class="muted" style="margin-top:16px;">
+      Tip: On iOS, open this site in Safari → Share → Add to Home Screen
+    </p>
   </div>
+</div>
 
-  <script>
-    // Use relative path so it works from project pages and local server
-    const API = 'prices.json';
+<script>
+  function pricesUrl() {
+    return "prices.json?t=" + Date.now();
+  }
 
-    const $petrol = document.getElementById('petrol');
-    const $diesel = document.getElementById('diesel');
-    const $updated = document.getElementById('updated');
-    const $refresh = document.getElementById('refresh');
+  async function loadPrices() {
+    try {
+      const res = await fetch(pricesUrl(), { cache: "no-store" });
+      if (!res.ok) throw new Error("Network error");
+      const data = await res.json();
 
-    async function showData(obj){
-      $petrol.textContent = obj.petrol ? '₹' + Number(obj.petrol).toFixed(2) : '—';
-      $diesel.textContent = obj.diesel ? '₹' + Number(obj.diesel).toFixed(2) : '—';
-      $updated.textContent = obj.updated_at ? new Date(obj.updated_at).toLocaleString() : '—';
-      localStorage.setItem('lastPrices', JSON.stringify(obj));
-    }
+      document.getElementById("petrol").textContent = "₹" + data.petrol.toFixed(2);
+      document.getElementById("diesel").textContent = "₹" + data.diesel.toFixed(2);
+      document.getElementById("updated").textContent =
+        new Date(data.updated_at).toLocaleString();
 
-    async function loadPrices(){
-      try {
-        const res = await fetch(API, {cache: 'no-store'});
-        if (!res.ok) throw new Error('network error');
-        const j = await res.json();
-        await showData(j);
-      } catch (e) {
-        const cached = localStorage.getItem('lastPrices');
-        if (cached) {
-          showData(JSON.parse(cached));
-        } else {
-          $petrol.textContent = '—';
-          $diesel.textContent = '—';
-          $updated.textContent = 'No data';
-        }
+      localStorage.setItem("prices", JSON.stringify(data));
+    } catch (err) {
+      const cached = localStorage.getItem("prices");
+      if (cached) {
+        const data = JSON.parse(cached);
+        document.getElementById("petrol").textContent = "₹" + data.petrol.toFixed(2);
+        document.getElementById("diesel").textContent = "₹" + data.diesel.toFixed(2);
+        document.getElementById("updated").textContent =
+          new Date(data.updated_at).toLocaleString();
+      } else {
+        document.getElementById("updated").textContent = "No data";
       }
     }
+  }
 
-    $refresh.addEventListener('click', loadPrices);
+  document.getElementById("refresh").addEventListener("click", loadPrices);
 
-    // register service worker relative to this file so scope is correct
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('sw.js').catch(err => console.warn('SW reg failed', err));
-    }
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("sw.js").then((reg) => {
+      if (reg.update) reg.update(); // force SW to update immediately
+    });
+  }
 
-    loadPrices();
-  </script>
+  loadPrices();
+</script>
+
 </body>
 </html>
