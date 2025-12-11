@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="theme-color" content="#00695c" />
+  <link rel="manifest" href="/manifest.json" />
+  <title>Kerala Fuel Prices</title>
+  <style>
+    body{font-family:system-ui,Arial;max-width:520px;margin:40px auto;padding:16px}
+    .card{padding:16px;border-radius:8px;box-shadow:0 1px 6px rgba(0,0,0,.08)}
+    .price{font-size:2rem;margin:8px 0}
+    .muted{color:#666;font-size:.9rem}
+    #refresh{margin-top:12px}
+  </style>
+</head>
+<body>
+  <h1>Kerala Fuel Prices</h1>
+
+  <div class="card">
+    <div><strong id="district">Kerala (state)</strong></div>
+    <div class="price">Petrol: <span id="petrol">—</span></div>
+    <div class="price">Diesel: <span id="diesel">—</span></div>
+    <div class="muted">Last update: <span id="updated">—</span></div>
+    <button id="refresh">Refresh now</button>
+    <p class="muted">Tip: on iOS use Safari → Share → Add to Home Screen</p>
+  </div>
+
+  <script>
+    // Now using local prices.json
+    const API = '/prices.json';
+
+    const $petrol = document.getElementById('petrol');
+    const $diesel = document.getElementById('diesel');
+    const $updated = document.getElementById('updated');
+    const $refresh = document.getElementById('refresh');
+
+    async function showData(obj){
+      $petrol.textContent = obj.petrol ? '₹' + Number(obj.petrol).toFixed(2) : '—';
+      $diesel.textContent = obj.diesel ? '₹' + Number(obj.diesel).toFixed(2) : '—';
+      $updated.textContent = obj.updated_at ? new Date(obj.updated_at).toLocaleString() : '—';
+      localStorage.setItem('lastPrices', JSON.stringify(obj));
+    }
+
+    async function loadPrices(){
+      try {
+        const res = await fetch(API, {cache: 'no-store'});
+        if (!res.ok) throw new Error('network error');
+        const j = await res.json();
+        await showData(j);
+      } catch (e) {
+        const cached = localStorage.getItem('lastPrices');
+        if (cached) {
+          showData(JSON.parse(cached));
+        } else {
+          $petrol.textContent = '—';
+          $diesel.textContent = '—';
+          $updated.textContent = 'No data';
+        }
+      }
+    }
+
+    $refresh.addEventListener('click', loadPrices);
+
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(err => console.warn('SW reg failed', err));
+    }
+
+    loadPrices();
+  </script>
+</body>
+</html>
