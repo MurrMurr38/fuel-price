@@ -1,0 +1,8 @@
+{
+  "name": "fuel-price",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "update": "node scripts/local_update.js"
+  }
+}
